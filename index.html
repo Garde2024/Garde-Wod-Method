@@ -135,6 +135,12 @@
   .mode-tag { font-family: 'Bebas Neue', sans-serif; font-size: 9px; letter-spacing: 1px; padding: 2px 6px; border-radius: 3px; background: #1a1a1a; color: #888; }
   .mode-tag.clases { background: #2a2008; color: #FFD60A; }
   .mode-tag.atletas { background: #0c1a14; color: #00D9A0; }
+  .mode-tag.disc-hipertrofia { background: #0c1a2a; color: #4DA6FF; }
+  .mode-tag.disc-crossfit { background: #2a1608; color: #FF8A3D; }
+  .mode-tag.disc-hyrox { background: #2a0c14; color: #FF3C6E; }
+  .disc-check-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .disc-check-group label { display: flex; align-items: center; gap: 5px; font-size: 12px; background: #111; padding: 8px 12px; border-radius: 8px; border: 1px solid #1e1e1e; cursor: pointer; }
+  .disc-check-group input[type="checkbox"] { width: auto; accent-color: #FFD60A; }
 
   /* === ATTENDANCE === */
   .att-row { display: flex; align-items: center; gap: 12px; background: #0d0d0d; border: 1px solid #1a1a1a; border-radius: 14px; padding: 14px; margin: 0 16px 6px; cursor: pointer; transition: transform 0.15s; }
@@ -310,6 +316,20 @@
   .ex-input-row { display: grid; grid-template-columns: 2fr 1fr 1fr 30px; gap: 6px; margin-bottom: 6px; align-items: center; }
   .ex-input-row input { padding: 8px; font-size: 12px; }
   .ex-input-row .del { color: #FF3C6E; font-size: 18px; text-align: center; padding: 0; background: transparent; border: none; }
+  .ex-group-box { border-left: 3px solid; border-radius: 6px; padding: 8px 6px 2px 8px; margin-bottom: 6px; background: rgba(255,255,255,0.02); }
+  .ex-group-label { font-family: 'Bebas Neue', sans-serif; font-size: 10px; letter-spacing: 1.5px; margin-bottom: 6px; opacity: 0.85; }
+  .ex-group-box .ex-input-row { margin-bottom: 6px; }
+  .ex-link-toggle { display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 10px; color: #666; background: transparent; border: none; padding: 4px 0; margin: -2px 0 4px; cursor: pointer; letter-spacing: 0.5px; }
+  .ex-link-toggle.active { color: #FFD60A; font-weight: 700; }
+  .block-weeks-grid { display: flex; flex-direction: column; gap: 10px; }
+  .block-week-card { border: 1px solid; border-left-width: 4px; border-radius: 10px; padding: 12px; background: #0d0d0d; cursor: pointer; }
+  .block-week-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .block-week-num { font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1px; color: #f0f0f0; }
+  .block-week-date { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: #666; }
+  .block-week-tag { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: 1.5px; margin-bottom: 4px; }
+  .block-week-info { background: transparent; border: none; color: #888; font-size: 10px; padding: 2px 0; text-decoration: underline; }
+  .block-week-desc { font-size: 11px; color: #ccc; line-height: 1.5; margin-top: 6px; padding-top: 6px; border-top: 1px solid #1a1a1a; }
+  .block-context-banner { font-size: 11px; color: #FFD60A; background: rgba(255,214,10,0.08); border: 1px solid rgba(255,214,10,0.25); border-radius: 8px; padding: 8px 10px; margin-bottom: 12px; }
 
   /* === TOAST === */
   .toast { position: fixed; bottom: 110px; left: 50%; transform: translateX(-50%); background: #FFD60A; color: #060606; padding: 12px 20px; border-radius: 10px; font-family: 'Bebas Neue', sans-serif; font-size: 14px; letter-spacing: 1px; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,0.6); animation: toastIn 0.3s ease; max-width: 90%; }
@@ -592,6 +612,7 @@
         </div>
       </div>
       <div class="section-title">RUTINAS <button class="add-btn" id="btn-new-routine">+ NUEVA</button></div>
+      <button class="btn-secondary" id="btn-plan-block" style="width:calc(100% - 32px);margin:0 16px 12px">📅 PLANIFICAR BLOQUE (4 SEMANAS)</button>
       <div id="routines-list"></div>
     </div>
 
@@ -784,6 +805,7 @@
     <div class="filter-chips">
       <button class="chip active" data-bank="wods">WODs</button>
       <button class="chip" data-bank="benchmarks">Benchmarks</button>
+      <button class="chip" data-bank="exercises">Movimientos</button>
       <button class="chip" data-bank="routines">Rutinas</button>
     </div>
 
@@ -1330,6 +1352,49 @@ let routinesByStudent = {};
 let currentDetailStudent = null;
 let currentDetailMode = 'atletas';
 let currentBankTab = 'wods';
+
+// === EXERCISE_INFO: descripción técnica + músculos/articulaciones por ejercicio (id del EXERCISES_BANK) ===
+// Arranca con Movilidad; el resto de categorías se suma en próximas pasadas.
+const EXERCISE_INFO = {
+  cat_cow: { desc: 'En 4 apoyos, alterná arquear la espalda hacia arriba (gato) exhalando y hundirla hacia abajo (vaca) inhalando, moviendo toda la columna.', targets: 'Columna vertebral completa, core' },
+  cobra_stretch: { desc: 'Acostado boca abajo, apoyá las manos y extendé los brazos levantando el pecho, manteniendo la cadera en el piso.', targets: 'Columna lumbar, abdominales, flexores de cadera' },
+  childs_pose: { desc: 'De rodillas, sentate sobre los talones y llevá el torso hacia adelante con los brazos extendidos, apoyando la frente.', targets: 'Columna, dorsales, cadera' },
+  down_up_dog: { desc: 'Desde perro boca abajo (cadera arriba, talones al piso) pasá a perro boca arriba (cadera abajo, pecho al frente) de forma fluida.', targets: 'Cadena posterior completa, hombros, columna' },
+  inchworm: { desc: 'De pie, flexioná la cadera y llevá las manos al piso, caminá con las manos hacia adelante hasta plancha y volvé caminando con los pies.', targets: 'Isquiotibiales, hombros, core' },
+  scorpion: { desc: 'Acostado boca abajo con brazos en cruz, llevá un pie hacia la mano contraria rotando la cadera, alternando lados.', targets: 'Columna torácica, cadera, glúteos' },
+  foam_roll: { desc: 'Apoyá el grupo muscular a trabajar sobre el rodillo y deslizate lentamente buscando puntos de tensión, sosteniendo unos segundos en cada uno.', targets: 'Según la zona (cuádriceps, isquios, dorsal, etc.)' },
+  hip_circles: { desc: 'De pie o en 4 apoyos, llevá una pierna en círculos amplios desde la cadera, sin mover el torso.', targets: 'Articulación de cadera' },
+  hip_9090: { desc: 'Sentado en el piso, ambas piernas dobladas a 90°, una adelante y otra atrás, rotá el torso hacia la pierna de adelante.', targets: 'Rotadores internos y externos de cadera' },
+  couch_stretch: { desc: 'Apoyá el empeine de atrás contra una pared o sofá y avanzá la cadera hacia adelante manteniendo el torso erguido.', targets: 'Flexor de cadera, cuádriceps' },
+  pigeon: { desc: 'Desde 4 apoyos, llevá una pierna flexionada al frente y la otra extendida atrás, bajando el torso sobre la pierna delantera.', targets: 'Glúteo, rotadores de cadera' },
+  cossack: { desc: 'Parado con piernas bien abiertas, sentate hacia un lado flexionando esa rodilla y manteniendo la otra pierna extendida.', targets: 'Aductores, cadera, tobillo' },
+  spiderman: { desc: 'Desde plancha, llevá un pie al lado de la mano del mismo lado, abriendo la cadera hacia el piso.', targets: 'Flexor de cadera, aductores, isquiotibiales' },
+  wgs: { desc: 'Secuencia: paso largo al frente, mano al piso, rotación de tronco con brazo al cielo, y estiramiento de isquiotibial, todo encadenado.', targets: 'Cadera, isquiotibiales, columna torácica' },
+  banded_hip: { desc: 'Con una banda alrededor de la cadera anclada al costado, hacé sentadillas o desplazamientos generando tracción lateral en la articulación.', targets: 'Cápsula de cadera' },
+  frog: { desc: 'En 4 apoyos, separá las rodillas bien abiertas y llevá la cadera hacia atrás, manteniendo los tobillos en línea con las rodillas.', targets: 'Aductores, cadera' },
+  lizard: { desc: 'Paso largo al frente con la mano del mismo lado apoyada adentro del pie, bajando la cadera hacia el piso.', targets: 'Flexor de cadera, aductores' },
+  tspine_rot: { desc: 'En 4 apoyos con una mano detrás de la cabeza, rotá el torso llevando el codo hacia arriba mirando al techo.', targets: 'Columna torácica' },
+  tspine_ext: { desc: 'Con un rodillo o soporte a la altura de la espalda media, extendé la columna torácica hacia atrás sin forzar la lumbar.', targets: 'Columna torácica' },
+  wall_slides: { desc: 'Espalda contra la pared, brazos en "W" apoyados en la pared, deslizalos hacia arriba en "Y" manteniendo contacto.', targets: 'Hombro, escápula, columna torácica' },
+  bird_dog: { desc: 'En 4 apoyos, extendé un brazo y la pierna contraria a la vez, manteniendo la cadera y los hombros nivelados.', targets: 'Core, estabilidad lumbo-pélvica' },
+  dead_bug: { desc: 'Acostado boca arriba con brazos y rodillas al aire a 90°, bajá un brazo y la pierna contraria hacia el piso sin despegar la lumbar.', targets: 'Core profundo' },
+  shoulder_rolls: { desc: 'De pie, rotá ambos hombros en círculos amplios, adelante y atrás.', targets: 'Articulación del hombro' },
+  arm_circles: { desc: 'Brazos extendidos a los costados, hacé círculos pequeños a grandes, adelante y atrás.', targets: 'Hombro' },
+  banded_dislocate: { desc: 'Sostené una banda o palo con las manos bien separadas y llevalo desde el frente hasta atrás de la cabeza sin doblar los codos.', targets: 'Hombro, pectoral, dorsal' },
+  pvc_pass: { desc: 'Sostené un palo (PVC) con agarre ancho y pasalo por encima de la cabeza de adelante hacia atrás.', targets: 'Hombro' },
+  banded_pullapart: { desc: 'Sostené una banda con los brazos extendidos al frente y abrila llevando las manos hacia los costados, juntando los omóplatos.', targets: 'Deltoides posterior, romboides' },
+  face_pull_band: { desc: 'Con la banda anclada a la altura de la cara, tirá hacia vos separando las manos y llevando los codos hacia atrás y arriba.', targets: 'Deltoides posterior, rotadores externos de hombro' },
+  ext_rot_band: { desc: 'Codo pegado al cuerpo a 90°, con banda anclada al costado, rotá el antebrazo hacia afuera sin mover el codo.', targets: 'Manguito rotador (rotadores externos)' },
+  sleeper_stretch: { desc: 'Acostado de costado con el hombro de abajo a 90°, usá la otra mano para empujar el antebrazo hacia el piso.', targets: 'Rotadores internos de hombro' },
+  wrist_circles: { desc: 'Con los brazos extendidos, rotá las muñecas en círculos en ambos sentidos.', targets: 'Muñeca' },
+  wrist_pushups: { desc: 'En 4 apoyos, apoyá distintas partes de la mano (nudillos, dorso, palma) soportando peso progresivamente.', targets: 'Muñeca, antebrazo' },
+  wrist_stretch: { desc: 'Con un brazo extendido, usá la otra mano para llevar los dedos hacia atrás (extensión) y después hacia adelante (flexión).', targets: 'Muñeca, antebrazo' },
+  ankle_circles: { desc: 'Sentado o parado en un pie, rotá el tobillo en círculos en ambos sentidos.', targets: 'Tobillo' },
+  ankle_dorsi: { desc: 'De rodillas frente a una pared, llevá la rodilla hacia la pared sin despegar el talón del piso, buscando tocarla.', targets: 'Dorsiflexión de tobillo' },
+  calf_stretch: { desc: 'Apoyado contra una pared, un pie atrás con el talón en el piso y la rodilla extendida, inclinate hacia la pared.', targets: 'Gemelos, sóleo' },
+  banded_ankle: { desc: 'Con una banda anclada por delante del tobillo, llevá la rodilla hacia adelante sobre el pie manteniendo el talón apoyado.', targets: 'Dorsiflexión de tobillo' }
+};
+function getExInfo(id) { return EXERCISE_INFO[id] || null; }
 let activeFilter = 'all';
 let activeSort = 'active';
 let isRegisterMode = false;
@@ -1552,6 +1617,10 @@ function renderStudents() {
     const modes = [];
     if (s.mode === 'clases' || s.mode === 'ambos') modes.push('<span class="mode-tag clases">CLASES</span>');
     if (s.mode === 'atletas' || s.mode === 'ambos' || !s.mode) modes.push('<span class="mode-tag atletas">ATLETAS</span>');
+    (s.disciplines||[]).forEach(d => {
+      const label = d === 'hipertrofia' ? 'HIPERTROFIA' : d === 'crossfit' ? 'CROSSFIT' : d === 'hyrox' ? 'HYROX' : d.toUpperCase();
+      modes.push(`<span class="mode-tag disc-${d}">${label}</span>`);
+    });
     if (s.deleted) modes.push('<span class="mode-tag" style="background:#3a1a1a;color:#FF3C6E">DE BAJA</span>');
     return `
       <div class="student-card" data-id="${s.id}" ${s.deleted ? 'style="opacity:0.6"' : ''}>
@@ -1594,6 +1663,13 @@ $('btn-new-student').onclick = () => {
         <option value="ambos">Ambos</option>
       </select>
     </div>
+    <div class="field-group"><label>Disciplinas</label>
+      <div class="disc-check-group">
+        <label><input type="checkbox" class="ns-disc" value="hipertrofia"> Hipertrofia</label>
+        <label><input type="checkbox" class="ns-disc" value="crossfit"> CrossFit</label>
+        <label><input type="checkbox" class="ns-disc" value="hyrox"> Hyrox</label>
+      </div>
+    </div>
     <div class="field-group"><label>Color</label><input id="ns-color" type="color" value="#FFD60A" style="height:42px"></div>
     <div style="font-size:11px;color:#888;margin-top:8px;line-height:1.4"><em>💡 Compartile email + contraseña al alumno cuando le des de alta.</em></div>
   `, async () => {
@@ -1614,6 +1690,7 @@ $('btn-new-student').onclick = () => {
             age: parseInt($('ns-age').value)||null,
             objective: $('ns-obj').value.trim(),
             mode: $('ns-mode').value,
+            disciplines: Array.from(document.querySelectorAll('.ns-disc:checked')).map(c => c.value),
             color: $('ns-color').value,
             deleted: false,
             reactivatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -1648,6 +1725,7 @@ $('btn-new-student').onclick = () => {
         age: parseInt($('ns-age').value)||null,
         objective: $('ns-obj').value.trim(),
         mode: $('ns-mode').value,
+        disciplines: Array.from(document.querySelectorAll('.ns-disc:checked')).map(c => c.value),
         color: $('ns-color').value,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -1840,6 +1918,7 @@ async function loadStudentRoutines() {
         <div class="routine-head">
           <div>
             <span class="day-tag">${r.day || '—'}</span>
+            ${r.week ? `<span style="font-size:9px;font-family:'JetBrains Mono';color:${r.cyclePhase ? CYCLE_PHASES[r.cyclePhase].color : (r.weekType==='descarga'?'#00D9A0':'#FFD60A')};letter-spacing:1px;background:rgba(255,255,255,0.06);padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle">S${r.week} · ${r.cyclePhase ? CYCLE_PHASES[r.cyclePhase].label : (r.weekType==='descarga'?'DESCARGA':'CARGA')}</span>` : ''}
             <div class="routine-name">${r.name || 'Sin nombre'}${hasBlocks ? ' <span style="font-size:9px;font-family:JetBrains Mono;color:#FFD60A;letter-spacing:1px;background:rgba(255,214,10,0.1);padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle">⚡ BLOQUES</span>' : ''}</div>
             ${(r.muscles||[]).length ? `<div class="routine-muscles">${(r.muscles||[]).join(' · ')}</div>` : ''}
           </div>
@@ -2039,16 +2118,46 @@ $('btn-edit-student').onclick = () => {
         <option value="ambos" ${s.mode==='ambos'?'selected':''}>Ambos</option>
       </select>
     </div>
+    <div class="field-group"><label>Disciplinas</label>
+      <div class="disc-check-group">
+        <label><input type="checkbox" class="es-disc" value="hipertrofia" ${(s.disciplines||[]).includes('hipertrofia')?'checked':''}> Hipertrofia</label>
+        <label><input type="checkbox" class="es-disc" value="crossfit" ${(s.disciplines||[]).includes('crossfit')?'checked':''}> CrossFit</label>
+        <label><input type="checkbox" class="es-disc" value="hyrox" ${(s.disciplines||[]).includes('hyrox')?'checked':''}> Hyrox</label>
+      </div>
+    </div>
+    <div class="field-group"><label>Periodización</label>
+      <select id="es-period">
+        <option value="standard" ${(!s.periodizationType||s.periodizationType==='standard')?'selected':''}>Estándar (3 sem. carga + 1 descarga)</option>
+        <option value="cycle" ${s.periodizationType==='cycle'?'selected':''}>Por ciclo menstrual</option>
+      </select>
+    </div>
+    <div id="es-cycle-fields" style="display:${s.periodizationType==='cycle'?'block':'none'}">
+      <div class="field-group"><label>Fecha de inicio del último período</label><input id="es-cycle-start" type="date" value="${s.cycleData?.lastPeriodStart||''}"></div>
+      <div class="field-group"><label>Duración promedio del ciclo (días)</label><input id="es-cycle-len" type="number" value="${s.cycleData?.avgCycleLength||28}"></div>
+      <div style="font-size:11px;color:#888;margin:-4px 0 8px;line-height:1.4"><em>Opcional, lo carga la alumna o vos con su consentimiento. Editable/borrable en cualquier momento.</em></div>
+    </div>
     <div class="field-group"><label>Color</label><input id="es-color" type="color" value="${s.color||'#FFD60A'}" style="height:42px"></div>
   `, async () => {
     try {
-      await db.collection('students').doc(s.id).update({
+      const periodType = $('es-period').value;
+      const update = {
         name: $('es-name').value.trim() || s.name,
         age: parseInt($('es-age').value)||null,
         objective: $('es-obj').value.trim(),
         mode: $('es-mode').value,
+        disciplines: Array.from(document.querySelectorAll('.es-disc:checked')).map(c => c.value),
+        periodizationType: periodType,
         color: $('es-color').value
-      });
+      };
+      if (periodType === 'cycle') {
+        update.cycleData = {
+          lastPeriodStart: $('es-cycle-start').value || null,
+          avgCycleLength: parseInt($('es-cycle-len').value) || 28
+        };
+      } else {
+        update.cycleData = firebase.firestore.FieldValue.delete();
+      }
+      await db.collection('students').doc(s.id).update(update);
       toast('Actualizado');
       await loadStudents();
       currentDetailStudent = students.find(x => x.id === s.id);
@@ -2056,6 +2165,11 @@ $('btn-edit-student').onclick = () => {
       return true;
     } catch (e) { toast('Error: '+e.message); return false; }
   });
+  setTimeout(() => {
+    $('es-period').onchange = () => {
+      $('es-cycle-fields').style.display = $('es-period').value === 'cycle' ? 'block' : 'none';
+    };
+  }, 50);
 };
 
 $('btn-message').onclick = () => {
@@ -2170,6 +2284,106 @@ $('btn-new-routine').onclick = () => {
   }, 100);
 };
 
+// === PLANIFICADOR DE BLOQUE (4 SEMANAS) ===
+const CYCLE_PHASES = {
+  menstrual: { label: 'MENSTRUAL', color: '#FF3C6E', desc: 'Estrógeno y progesterona en su punto más bajo. Puede haber menos energía o molestias. Volumen moderado, prioridad en técnica y escuchar la sensación de la alumna.' },
+  folicular: { label: 'FOLICULAR', color: '#00D9A0', desc: 'El estrógeno empieza a subir. Mejor tolerancia al esfuerzo y buena recuperación. Es la ventana para subir carga o intensidad.' },
+  ovulatoria: { label: 'OVULATORIA', color: '#FFD60A', desc: 'Pico de estrógeno, buen rendimiento general, pero mayor laxitud ligamentaria — cuidado extra en gestos de alto impacto o pliometría.' },
+  lutea: { label: 'LÚTEA', color: '#FF8A3D', desc: 'Sube la progesterona y después cae junto al estrógeno hacia el final. Puede aparecer más fatiga o mayor esfuerzo percibido para la misma carga — bajar volumen hacia el final de esta fase, sin forzar.' }
+};
+
+function cyclePhaseForDate(date, lastPeriodStart, avgLen) {
+  const start = parseAttDate(lastPeriodStart);
+  const diffDays = Math.floor((date - start) / 86400000);
+  const cycleDay = ((diffDays % avgLen) + avgLen) % avgLen + 1; // 1..avgLen
+  const ovuCenter = avgLen / 2;
+  if (cycleDay <= 5) return 'menstrual';
+  if (cycleDay <= ovuCenter - 2) return 'folicular';
+  if (cycleDay <= ovuCenter + 1) return 'ovulatoria';
+  return 'lutea';
+}
+
+function computeBlockWeeks(student) {
+  const monday = new Date(); monday.setHours(0,0,0,0);
+  monday.setDate(monday.getDate() - ((monday.getDay()+6)%7)); // lunes de esta semana
+  const weeks = [];
+  for (let w = 0; w < 4; w++) {
+    const weekStart = new Date(monday.getTime() + w*7*86400000);
+    if (student.periodizationType === 'cycle' && student.cycleData?.lastPeriodStart) {
+      const phase = cyclePhaseForDate(weekStart, student.cycleData.lastPeriodStart, student.cycleData.avgCycleLength || 28);
+      weeks.push({ week: w+1, weekStart, cyclePhase: phase, weekType: null });
+    } else {
+      const weekType = w < 3 ? 'carga' : 'descarga';
+      weeks.push({ week: w+1, weekStart, cyclePhase: null, weekType });
+    }
+  }
+  return weeks;
+}
+
+let currentBlockContext = null; // { blockId, week, weekType, cyclePhase } — se aplica a la próxima rutina que se guarde
+
+$('btn-plan-block').onclick = () => {
+  if (!currentDetailStudent) return;
+  const s = currentDetailStudent;
+  const weeks = computeBlockWeeks(s);
+  const blockId = `block_${Date.now()}`;
+  const cardHtml = weeks.map(w => {
+    const dateLabel = `${w.weekStart.getDate()} ${MONTHS_ES[w.weekStart.getMonth()].slice(0,3)}`;
+    if (w.cyclePhase) {
+      const ph = CYCLE_PHASES[w.cyclePhase];
+      return `
+        <div class="block-week-card" data-week="${w.week}" data-blockid="${blockId}" data-phase="${w.cyclePhase}" style="border-color:${ph.color}">
+          <div class="block-week-head">
+            <div class="block-week-num">SEMANA ${w.week}</div>
+            <div class="block-week-date">${dateLabel}</div>
+          </div>
+          <div class="block-week-tag" style="color:${ph.color}">${ph.label}</div>
+          <button class="block-week-info" data-phase="${w.cyclePhase}">ℹ️ qué es esta fase</button>
+          <div class="block-week-desc" id="phase-desc-${w.week}" style="display:none">${ph.desc}</div>
+        </div>`;
+    } else {
+      const color = w.weekType === 'descarga' ? '#00D9A0' : '#FFD60A';
+      const label = w.weekType === 'descarga' ? 'DESCARGA' : 'CARGA';
+      return `
+        <div class="block-week-card" data-week="${w.week}" data-blockid="${blockId}" data-weektype="${w.weekType}" style="border-color:${color}">
+          <div class="block-week-head">
+            <div class="block-week-num">SEMANA ${w.week}</div>
+            <div class="block-week-date">${dateLabel}</div>
+          </div>
+          <div class="block-week-tag" style="color:${color}">${label}</div>
+        </div>`;
+    }
+  }).join('');
+
+  openModal('Bloque de 4 semanas', `
+    <div style="font-size:11px;color:#888;margin-bottom:12px;line-height:1.5"><em>Tocá una semana para crear su rutina ya etiquetada con ese bloque. ${s.periodizationType==='cycle' ? 'Proyección estimada según el ciclo cargado — es una guía, no una certeza.' : ''}</em></div>
+    <div class="block-weeks-grid">${cardHtml}</div>
+  `, null, 'Cerrar');
+
+  setTimeout(() => {
+    document.querySelectorAll('.block-week-info').forEach(b => {
+      b.onclick = (e) => {
+        e.stopPropagation();
+        const card = b.closest('.block-week-card');
+        const desc = card.querySelector('.block-week-desc');
+        desc.style.display = desc.style.display === 'none' ? 'block' : 'none';
+      };
+    });
+    document.querySelectorAll('.block-week-card').forEach(card => {
+      card.onclick = () => {
+        currentBlockContext = {
+          blockId: card.dataset.blockid,
+          week: parseInt(card.dataset.week),
+          weekType: card.dataset.weektype || null,
+          cyclePhase: card.dataset.phase || null
+        };
+        closeModal();
+        setTimeout(() => openRoutineModal(), 150);
+      };
+    });
+  }, 100);
+};
+
 // Abre el editor unificado para crear una rutina personal del alumno actual
 // Truco: navegamos al editor de WOD pero en "modo rutina personal"
 let routineEditorMode = null; // null | { studentId, studentName, dayPreset }
@@ -2249,26 +2463,52 @@ function exitRoutineEditorMode() {
   renderBlocks();
 }
 
+const EX_GROUP_COLORS = ['#4DA6FF', '#FF8A3D', '#00D9A0', '#FF3C6E', '#C77DFF'];
+let editingExercises = []; // [{name, sets, reps, weight, linked}] — linked: true = agrupado con el siguiente
+
 function openRoutineModal(existing) {
-  const exHtml = (existing?.exercises || [{name:'',sets:'',reps:'',weight:''}]).map((e,i) => exRow(e,i)).join('');
+  // Convertir grupoId (guardado) → flag "linked" (agrupado con el siguiente) para editar
+  const src = existing?.exercises || [{name:'',sets:'',reps:'',weight:''}];
+  editingExercises = src.map((e,i) => {
+    const next = src[i+1];
+    const linked = !!(e.grupoId && next && next.grupoId === e.grupoId);
+    return { name: e.name||'', sets: e.sets||'', reps: e.reps||'', weight: e.weight||'', linked };
+  });
+
+  const blockCtx = existing ? null : currentBlockContext; // solo aplica a rutinas nuevas creadas desde el planificador
+  currentBlockContext = null; // se consume una sola vez
+  let blockBannerHtml = '';
+  if (blockCtx) {
+    const tag = blockCtx.cyclePhase ? CYCLE_PHASES[blockCtx.cyclePhase].label : (blockCtx.weekType === 'descarga' ? 'DESCARGA' : 'CARGA');
+    blockBannerHtml = `<div class="block-context-banner">📅 Semana ${blockCtx.week} del bloque · ${tag}</div>`;
+  }
+
   openModal(existing ? 'Editar Rutina' : 'Nueva Rutina', `
+    ${blockBannerHtml}
     <div class="field-group"><label>Día</label>
       <select id="r-day">${['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'].map(d => `<option ${existing?.day===d?'selected':''}>${d}</option>`).join('')}</select>
     </div>
     <div class="field-group"><label>Nombre</label><input id="r-name" value="${existing?.name||''}"></div>
     <div class="field-group"><label>Grupos musculares (separados por coma)</label><input id="r-muscles" value="${(existing?.muscles||[]).join(', ')}"></div>
     <div class="field-group">
-      <label>Ejercicios</label>
-      <div id="ex-list">${exHtml}</div>
+      <label>Ejercicios <span style="font-weight:400;color:#666;text-transform:none;letter-spacing:0">· tocá 🔗 para armar biseries/triseries</span></label>
+      <div id="ex-list"></div>
       <button class="btn-secondary" id="add-ex" style="margin-top:6px;width:100%">+ EJERCICIO</button>
     </div>
   `, async () => {
+    syncExFromInputs();
+    // Armar grupoId por cadenas contiguas de "linked"
     const exercises = [];
-    document.querySelectorAll('#ex-list .ex-input-row').forEach(row => {
-      const inputs = row.querySelectorAll('input');
-      const name = inputs[0].value.trim();
+    let groupCounter = 0, groupColorIdx = 0, currentGrupoId = null;
+    editingExercises.forEach((e, i) => {
+      const name = (e.name||'').trim();
       if (!name) return;
-      exercises.push({ name, sets: inputs[1].value.trim(), reps: inputs[2].value.trim(), weight: '' });
+      const prevLinked = i > 0 && editingExercises[i-1].linked;
+      if (!prevLinked) currentGrupoId = null;
+      if (e.linked || prevLinked) {
+        if (!currentGrupoId) { groupCounter++; currentGrupoId = `grp${Date.now()}_${groupCounter}`; }
+      }
+      exercises.push({ name, sets: e.sets.trim(), reps: e.reps.trim(), weight: '', grupoId: (e.linked || prevLinked) ? currentGrupoId : '' });
     });
     if (!exercises.length) { toast('Falta ejercicio'); return false; }
     const data = {
@@ -2278,6 +2518,12 @@ function openRoutineModal(existing) {
       exercises,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
+    if (blockCtx) {
+      data.blockId = blockCtx.blockId;
+      data.week = blockCtx.week;
+      if (blockCtx.weekType) data.weekType = blockCtx.weekType;
+      if (blockCtx.cyclePhase) data.cyclePhase = blockCtx.cyclePhase;
+    }
     try {
       const ref = db.collection('students').doc(currentDetailStudent.id).collection('routines');
       if (existing) await ref.doc(existing.id).update(data);
@@ -2289,22 +2535,87 @@ function openRoutineModal(existing) {
   });
 
   setTimeout(() => {
+    renderExList();
     $('add-ex').onclick = () => {
-      const div = document.createElement('div');
-      div.innerHTML = exRow({name:'',sets:'',reps:'',weight:''});
-      $('ex-list').appendChild(div.firstElementChild);
-      attachExDelete();
+      syncExFromInputs();
+      editingExercises.push({name:'',sets:'',reps:'',weight:'',linked:false});
+      renderExList();
     };
-    attachExDelete();
   }, 100);
 }
 
-function exRow(e) {
-  return `<div class="ex-input-row"><input placeholder="Ejercicio" value="${e.name||''}"><input placeholder="Sets" value="${e.sets||''}"><input placeholder="Reps" value="${e.reps||''}"><button class="del">×</button></div>`;
+// Lee los valores tipeados en los inputs actuales y los guarda en editingExercises (sin re-renderizar)
+function syncExFromInputs() {
+  document.querySelectorAll('#ex-list .ex-input-row').forEach((row, i) => {
+    if (!editingExercises[i]) return;
+    const inputs = row.querySelectorAll('input');
+    editingExercises[i].name = inputs[0].value;
+    editingExercises[i].sets = inputs[1].value;
+    editingExercises[i].reps = inputs[2].value;
+  });
 }
-function attachExDelete() {
+
+function renderExList() {
+  const html = [];
+  let i = 0;
+  let colorIdx = 0;
+  while (i < editingExercises.length) {
+    const e = editingExercises[i];
+    if (e.linked && editingExercises[i+1]) {
+      // Arrancar un grupo: juntar todos los ejercicios contiguos con linked=true
+      const groupItems = [e];
+      let j = i;
+      while (editingExercises[j] && editingExercises[j].linked && editingExercises[j+1]) {
+        groupItems.push(editingExercises[j+1]);
+        j++;
+      }
+      const color = EX_GROUP_COLORS[colorIdx % EX_GROUP_COLORS.length]; colorIdx++;
+      const label = groupItems.length === 2 ? 'BISERIE' : `${groupItems.length === 3 ? 'TRI' : groupItems.length}-SERIE`;
+      html.push(`<div class="ex-group-box" style="border-color:${color}"><div class="ex-group-label" style="color:${color}">🔗 ${label}</div>`);
+      groupItems.forEach((_, k) => {
+        const idx = i + k;
+        html.push(exRow(editingExercises[idx], idx));
+        if (idx < editingExercises.length - 1) html.push(linkToggleHTML(idx));
+      });
+      html.push(`</div>`);
+      i = j + 1;
+    } else {
+      html.push(exRow(e, i));
+      if (i < editingExercises.length - 1) html.push(linkToggleHTML(i));
+      i++;
+    }
+  }
+  $('ex-list').innerHTML = html.join('');
+  attachExHandlers();
+}
+
+function linkToggleHTML(idx) {
+  const active = editingExercises[idx].linked;
+  return `<button class="ex-link-toggle ${active?'active':''}" data-idx="${idx}">${active ? '🔗 AGRUPADO CON EL SIGUIENTE — tocá para separar' : '⛓️‍💥 agrupar con el siguiente (biserie/triserie)'}</button>`;
+}
+
+function exRow(e, idx) {
+  return `<div class="ex-input-row" data-idx="${idx}"><input placeholder="Ejercicio" value="${e.name||''}"><input placeholder="Sets" value="${e.sets||''}"><input placeholder="Reps" value="${e.reps||''}"><button class="del">×</button></div>`;
+}
+
+function attachExHandlers() {
   document.querySelectorAll('#ex-list .del').forEach(b => {
-    b.onclick = () => { if (document.querySelectorAll('#ex-list .ex-input-row').length>1) b.parentElement.remove(); };
+    b.onclick = () => {
+      if (editingExercises.length <= 1) return;
+      syncExFromInputs();
+      const idx = parseInt(b.parentElement.dataset.idx);
+      editingExercises.splice(idx, 1);
+      if (editingExercises[idx-1]) editingExercises[idx-1].linked = false; // evitar cadenas rotas
+      renderExList();
+    };
+  });
+  document.querySelectorAll('.ex-link-toggle').forEach(b => {
+    b.onclick = () => {
+      syncExFromInputs();
+      const idx = parseInt(b.dataset.idx);
+      editingExercises[idx].linked = !editingExercises[idx].linked;
+      renderExList();
+    };
   });
 }
 
@@ -4169,6 +4480,7 @@ document.querySelectorAll('#screen-bank .filter-chips .chip').forEach(c => {
     document.querySelectorAll('#screen-bank .filter-chips .chip').forEach(x => x.classList.remove('active'));
     c.classList.add('active');
     currentBankTab = c.dataset.bank;
+    $('btn-new-bank-item').style.display = currentBankTab === 'exercises' ? 'none' : '';
     renderBank();
   };
 });
@@ -4209,6 +4521,48 @@ async function renderBank() {
         e.stopPropagation();
         window._currentBmCat = b.dataset.bmcat;
         renderBank();
+      });
+    } else if (currentBankTab === 'exercises') {
+      const cats = [
+        {id:'all', label:'Todos'},
+        {id:'mobility', label:'Movilidad'},
+        {id:'warmup', label:'Warm Up'},
+        {id:'skill', label:'Skill'},
+        {id:'strength', label:'Strength'},
+        {id:'metcon', label:'Metcon'}
+      ];
+      const currentCat = window._currentExCat || 'all';
+      const q = (window._exSearch || '').toLowerCase();
+      const tabs = `<div class="filter-chips" style="padding:0 0 10px">${cats.map(c => `<button class="chip ${c.id===currentCat?'active':''}" data-excat="${c.id}">${c.label} <span class="count">${c.id==='all'?EXERCISES_BANK.length:EXERCISES_BANK.filter(x=>x.cat===c.id).length}</span></button>`).join('')}</div>`;
+      const searchHtml = `<input id="ex-bank-search" placeholder="Buscar movimiento..." value="${window._exSearch||''}" style="margin-bottom:10px">`;
+      let filtered = currentCat === 'all' ? EXERCISES_BANK : EXERCISES_BANK.filter(x => x.cat === currentCat);
+      if (q) filtered = filtered.filter(x => x.name.toLowerCase().includes(q));
+      const catLabel = {mobility:'Movilidad', warmup:'Warm Up', skill:'Skill', strength:'Strength', metcon:'Metcon'};
+      list.innerHTML = tabs + searchHtml + (filtered.length ? filtered.map(x => {
+        const info = getExInfo(x.id);
+        return `<div class="bm-card bm-clickable" data-exid="${x.id}"><div class="bm-head"><div class="bm-name">${x.name}</div><div class="bm-cat">${catLabel[x.cat]||x.cat}</div></div>${info ? `<div class="bm-desc">${info.targets}</div>` : '<div class="bm-desc" style="color:#555;font-style:italic">Sin info técnica todavía</div>'}</div>`;
+      }).join('') : '<div class="empty-mini">Sin resultados</div>');
+      list.querySelectorAll('[data-excat]').forEach(b => b.onclick = (e) => {
+        e.stopPropagation();
+        window._currentExCat = b.dataset.excat;
+        renderBank();
+      });
+      const searchInput = $('ex-bank-search');
+      if (searchInput) searchInput.oninput = () => { window._exSearch = searchInput.value; renderBank(); setTimeout(()=>$('ex-bank-search')?.focus(), 0); };
+      list.querySelectorAll('.bm-clickable').forEach(c => c.onclick = () => {
+        const ex = EXERCISES_BANK.find(x => x.id === c.dataset.exid);
+        const info = getExInfo(ex.id);
+        openModal(ex.name, `
+          <div style="background:#1a1602;border:1px solid #2a2008;border-radius:10px;padding:12px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#FFD60A;letter-spacing:1.5px;margin-bottom:8px">${(catLabel[ex.cat]||ex.cat).toUpperCase()}</div>
+            ${info ? `
+              <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Trabaja</div>
+              <div style="font-size:13px;color:#ddd;margin-bottom:12px">${info.targets}</div>
+              <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Ejecución</div>
+              <div style="font-size:13px;line-height:1.5;color:#ddd">${info.desc}</div>
+            ` : `<div style="font-size:12px;color:#888;font-style:italic">Todavía no cargamos la info técnica de este movimiento — va llegando de a poco.</div>`}
+          </div>
+        `, null, 'Cerrar');
       });
     } else {
       list.innerHTML = '<div class="empty-mini">Próximamente</div>';
